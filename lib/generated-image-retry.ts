@@ -20,6 +20,22 @@ function dispatchMomentsUpdated(): void {
     window.dispatchEvent(new CustomEvent("moments-updated"));
 }
 
+const WARDROBE_REFERENCE_STORAGE_PREFIX = 'kong_wardrobe_active_image:';
+
+/**
+ * 衣柜插件和宿主跑在同一个页面里，它把当前锁定的穿搭图（data URL）写在 localStorage。
+ * 这里读出来当第二张参考图；没有或不合法就返回 undefined。
+ */
+export function readWardrobeReferenceImage(characterId?: string): string | undefined {
+    if (!characterId || typeof window === 'undefined') return undefined;
+    try {
+        const value = window.localStorage.getItem(WARDROBE_REFERENCE_STORAGE_PREFIX + characterId);
+        if (!value || !value.startsWith('data:image/')) return undefined;
+        return value;
+    } catch {
+        return undefined;
+    }
+}
 export function createPendingChatGeneratedImageData(
     mediaData: ChatMessage["mediaData"] | undefined,
     description?: string,
@@ -77,6 +93,7 @@ export async function generateAndApplyChatGeneratedImage(
             description,
             characterId,
             useReferenceImage: effectiveUseReference,
+            outfitImageDataUrl: effectiveUseReference ? readWardrobeReferenceImage(characterId) : undefined,
             signal: options?.signal,
         });
         if (!generated) throw new Error("生图配置未启用或不完整");
